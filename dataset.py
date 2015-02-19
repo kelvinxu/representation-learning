@@ -1,6 +1,8 @@
 import os
 
+import h5py
 import numpy
+import theano
 
 from fuel import config
 from fuel.datasets import InMemoryDataset
@@ -22,14 +24,22 @@ class DogsVsCats(InMemoryDataset):
             self.stop = 25000
         else:
             raise ValueError
+        self.f = h5py.File(os.path.join(config.data_path, 'dogs_vs_cats',
+                                        'dogs_vs_cats.hdf5'))
 
-    def load(self):
-        path = os.path.join(config.data_path, 'dogs_vs_cats')
-        self.features = numpy.load(os.path.join(path, 'features.npy'))
-        self.targets = numpy.load(os.path.join(path, 'targets.npy'))
+    @property
+    def num_examples(self):
+        return self.stop - self.start
 
     def get_data(self, state=None, request=None):
         if state is not None:
             raise ValueError
-        return self.filter_sources((self.features[request],
-                                    self.targets[request]))
+        images, targets = [], []
+        request = sorted([i + self.start for i in request])
+        for image, shape, target in zip(self.f['images'][request],
+                                        self.f['shapes'][request],
+                                        self.f['labels'][request]):
+            images.append(image.reshape(shape).transpose((2, 0, 1)).astype(
+                theano.config.floatX) / 255)
+            targets.append([target])
+        return self.filter_sources((images, numpy.array(targets, dtype='int64')))
