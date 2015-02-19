@@ -4,14 +4,16 @@
 
 from theano import tensor
 
-from blocks.bricks import Rectifier, Softmax, MLP, Tanh
-from blocks.bricks.cost import CategoricalCrossEntropy
+from blocks.bricks import Rectifier, MLP  # , Softmax
+# from blocks.bricks.cost import CategoricalCrossEntropy
 from blocks.bricks.conv import (ConvolutionalLayer, ConvolutionalSequence,
                                 Flattener)
 from blocks.initialization import Uniform, Constant
 
 x = tensor.tensor4('features')
 y = tensor.lmatrix('targets')
+
+# Convolutional layers
 
 filter_sizes = [(5, 5)] * 3 + [(4, 4)] * 3
 num_filters = [32, 32, 64, 64, 128, 256]
@@ -28,6 +30,8 @@ convnet = ConvolutionalSequence(conv_layers, num_channels=3,
                                 biases_init=Constant(0.))
 convnet.initialize()
 
+# Fully connected layers
+
 features = Flattener().apply(convnet.apply(x))
 mlp = MLP(activations=[Rectifier(), None],
           dims=[256, 256, 2], weights_init=Uniform(0, 0.2),
@@ -35,17 +39,19 @@ mlp = MLP(activations=[Rectifier(), None],
 mlp.initialize()
 y_hat = mlp.apply(features)
 
+# Numerically stable softmax
+
 # cost = CategoricalCrossEntropy().apply(y.flatten(), y_hat)
 z = y_hat - y_hat.max(axis=1).dimshuffle(0, 'x')
 log_prob = z - tensor.log(tensor.exp(z).sum(axis=1).dimshuffle(0, 'x'))
 flat_log_prob = log_prob.flatten()
 range_ = tensor.arange(y.shape[0])
 flat_indices = y.flatten() + range_ * 2
-
 log_prob_of = flat_log_prob[flat_indices].reshape(y.shape, ndim=2)
 cost = -log_prob_of.mean()
 cost.name = 'cost'
 
+# Print sizes to check
 print("Representation sizes:")
 for layer in convnet.layers:
     print(layer.get_dim('input_'))
@@ -56,9 +62,9 @@ for layer in convnet.layers:
 ############
 
 from blocks.main_loop import MainLoop
-from blocks.algorithms import GradientDescent, Momentum, Scale
+from blocks.algorithms import GradientDescent, Momentum
 from blocks.extensions import Printing
-from blocks.extensions.monitoring import DataStreamMonitoring, TrainingDataMonitoring
+from blocks.extensions.monitoring import DataStreamMonitoring
 
 from dataset import DogsVsCats
 from streams import RandomPatch
@@ -67,7 +73,7 @@ from fuel.schemes import SequentialScheme, ShuffledScheme
 
 training_stream = DataStream(DogsVsCats('train'),
                              iteration_scheme=ShuffledScheme(20000, 32))
-training_stream = RandomPatch(training_stream, (260, 260))
+training_stream = RandomPatch(training_stream, 270, (260, 260))
 
 algorithm = GradientDescent(cost=cost, step_rule=Momentum(learning_rate=0.001,
                                                           momentum=0.1))
@@ -81,7 +87,7 @@ main_loop = MainLoop(
             RandomPatch(DataStream(
                 DogsVsCats('valid'),
                 iteration_scheme=SequentialScheme(2500, 32)),
-                (260, 260)),
+                270, (260, 260)),
             prefix='valid'
         ),
         Printing(),

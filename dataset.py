@@ -39,7 +39,6 @@ class DogsVsCats(InMemoryDataset):
         for image, shape, target in zip(self.f['images'][request],
                                         self.f['shapes'][request],
                                         self.f['labels'][request]):
-            images.append(image.reshape(shape).transpose((2, 0, 1)).astype(
-                theano.config.floatX) / 255)
+            images.append(image.reshape(shape))
             targets.append([target])
-        return self.filter_sources((images, numpy.array(targets, dtype='int64')))
+        return self.filter_sources((images, targets))
