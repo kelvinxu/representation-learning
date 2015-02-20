@@ -1,8 +1,6 @@
 import os
 
 import h5py
-import numpy
-import theano
 
 from fuel import config
 from fuel.datasets import InMemoryDataset
@@ -24,6 +22,15 @@ class DogsVsCats(InMemoryDataset):
             self.stop = 25000
         else:
             raise ValueError
+        self.f = h5py.File(os.path.join(config.data_path, 'dogs_vs_cats',
+                                        'dogs_vs_cats.hdf5'))
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['f']
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
         self.f = h5py.File(os.path.join(config.data_path, 'dogs_vs_cats',
                                         'dogs_vs_cats.hdf5'))
 

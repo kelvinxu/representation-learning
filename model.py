@@ -63,7 +63,8 @@ for layer in convnet.layers:
 
 from blocks.main_loop import MainLoop
 from blocks.algorithms import GradientDescent, Momentum
-from blocks.extensions import Printing
+from blocks.extensions import Printing, SimpleExtension
+from blocks.extensions.saveload import SerializeMainLoop
 from blocks.extensions.monitoring import DataStreamMonitoring
 
 from dataset import DogsVsCats
@@ -78,7 +79,6 @@ training_stream = RandomPatch(training_stream, 270, (260, 260))
 algorithm = GradientDescent(cost=cost, step_rule=Momentum(learning_rate=0.001,
                                                           momentum=0.1))
 
-
 main_loop = MainLoop(
     data_stream=training_stream, algorithm=algorithm,
     extensions=[
@@ -91,6 +91,7 @@ main_loop = MainLoop(
             prefix='valid'
         ),
         Printing(),
+        SerializeMainLoop('dogs_vs_cats.pkl', after_every_epoch=True),
     ]
 )
 main_loop.run()
