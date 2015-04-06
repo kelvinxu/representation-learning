@@ -28,7 +28,7 @@ class DogsVsCats(IndexableDataset):
         if os.path.exists('dogs_vs_cats.hdf5'):
             self.f = h5py.File('dogs_vs_cats.hdf5')
         else:
-            self.f = h5py.File(os.path.join(config.data_path, 'cats_vs_dogs',
+            self.f = h5py.File(os.path.join(config.data_path,
                 'dogs_vs_cats.hdf5'))
 
     @property

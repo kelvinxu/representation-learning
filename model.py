@@ -1,4 +1,15 @@
 ######################
+# Hyperparameter opt #
+######################
+
+import whetlab
+
+# name of the experiment in whetlab
+scientist = whetlab.Experiment(name="Cats_vs_Dogs")
+# params is a dict {variable name: suggestion}
+params = scientist.suggest()
+
+######################
 # Model construction #
 ######################
 
@@ -20,8 +31,8 @@ num_filters = [32, 32, 64, 64, 128, 256]
 pooling_sizes = [(2, 2)] * 6
 activation = Rectifier().apply
 conv_layers = [
-    ConvolutionalLayer(activation, filter_size, num_filters_, pooling_size)
-    for filter_size, num_filters_, pooling_size
+    ConvolutionalLayer(activation, filter_size, num_filters_, pooling_size_)
+    for filter_size, num_filters_, pooling_size_
     in zip(filter_sizes, num_filters, pooling_sizes)
 ]
 convnet = ConvolutionalSequence(conv_layers, num_channels=3,
@@ -51,6 +62,9 @@ log_prob_of = flat_log_prob[flat_indices].reshape(y.shape, ndim=2)
 cost = -log_prob_of.mean()
 cost.name = 'cost'
 
+misclass = MisclassificationRate().apply(y.flatten(), y_hat)
+misclass.name = 'error_rate'
+
 # Print sizes to check
 print("Representation sizes:")
 for layer in convnet.layers:
@@ -65,7 +79,7 @@ from blocks.main_loop import MainLoop
 from blocks.algorithms import GradientDescent, Momentum
 from blocks.extensions import Printing, SimpleExtension
 from blocks.extensions.saveload import Checkpoint
-from blocks.extensions.monitoring import DataStreamMonitoring
+from blocks.extensions.monitoring import DataStreamMonitoring, TrainingDataMonitoring
 from blocks.graph import ComputationGraph
 
 from dataset import DogsVsCats
@@ -84,16 +98,22 @@ algorithm = GradientDescent(cost=cost, params=cg.parameters, step_rule=Momentum(
 main_loop = MainLoop(
     data_stream=training_stream, algorithm=algorithm,
     extensions=[
+        TrainingDataMonitoring(
+            [cost, misclass],
+            prefix='train',
+            after_epoch=True),
         DataStreamMonitoring(
-            [cost],
+            [cost, misclass],
             RandomPatch(DataStream(
                 DogsVsCats('valid'),
                 iteration_scheme=SequentialScheme(2500, 32)),
                 270, (260, 260)),
-            prefix='valid'
-        ),
+            prefix='valid'),
         Printing(),
         Checkpoint('dogs_vs_cats.pkl', after_epoch=True),
     ]
 )
 main_loop.run()
+
+if __name__ == "__main__":
+    parser 
